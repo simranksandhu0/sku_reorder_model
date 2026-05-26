@@ -1,1 +1,64 @@
+"""
+velocity.py
+Computes rolling 4-week and prior 4-week sales velocity per SKU.
+Velocity is in units/day (weekly sales / 7).
+"""
 
+import pandas as pd
+import numpy as np
+from pathlib import Path
+
+WEEK_COLS_RECENT = [f"week_{w}_sales" for w in range(9, 13)]   # weeks 9–12 (most recent 4)
+WEEK_COLS_PRIOR  = [f"week_{w}_sales" for w in range(5, 9)]    # weeks 5–8 (prior 4)
+
+
+def load_and_validate(path: str = "data/inventory.csv") -> pd.DataFrame:
+    """Load inventory data and validate required columns."""
+    if not Path(path).exists():
+        raise FileNotFoundError(f"{path} not found. Run generate_data.py first.")
+
+    df = pd.read_csv(path)
+
+    required_base = {"sku_id", "category", "stock_on_hand"}
+    missing = required_base - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing columns: {missing}")
+
+    week_cols = [f"week_{w}_sales" for w in range(1, 17)]
+    missing_weeks = set(week_cols) - set(df.columns)
+    if missing_weeks:
+        raise ValueError(f"Missing weekly sales columns: {missing_weeks}")
+
+    if df["stock_on_hand"].lt(0).any():
+        raise ValueError("stock_on_hand contains negative values.")
+
+    print(f"Loaded {len(df):,} SKUs across categories: {df['category'].unique().tolist()}")
+    return df
+
+
+def compute_velocity(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add rolling velocity columns (units/day) to the DataFrame.
+
+    recent_velocity_daily : average daily units sold in weeks 9–12
+    prior_velocity_daily  : average daily units sold in weeks 5–8
+    velocity_change_pct   : % change from prior to recent (negative = declining)
+    """
+    df = df.copy()
+
+    # Total units in each 4-week window
+    df["recent_4w_units"] = df[WEEK_COLS_RECENT].sum(axis=1)
+    df["prior_4w_units"]  = df[WEEK_COLS_PRIOR].sum(axis=1)
+
+    # Convert to daily velocity (4 weeks = 28 days)
+    df["recent_velocity_daily"] = (df["recent_4w_units"] / 28).round(3)
+    df["prior_velocity_daily"]  = (df["prior_4w_units"]  / 28).round(3)
+
+    # Velocity change %; where prior is 0, set change to 0 to avoid division by zero
+    df["velocity_change_pct"] = np.where(
+        df["prior_velocity_daily"] > 0,
+        (df["recent_velocity_daily"] - df["prior_velocity_daily"]) / df["prior_velocity_daily"],
+        0.0,
+    ).round(4)
+
+    return df
