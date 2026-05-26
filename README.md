@@ -78,20 +78,9 @@ A structured Excel report with:
 ## File Structure
 
 ```
-sku-reorder-model/
-├── data/
-│   └── sample_inventory.csv        # Anonymised sample data
-├── src/
-│   ├── velocity.py                 # Sales velocity calculations
-│   ├── flags.py                    # Reorder flag logic
-│   └── report.py                   # Excel output generation
-├── config/
-│   └── thresholds.yaml             # Lead time and buffer settings per category
-├── outputs/
-│   └── sample_reorder_report.xlsx  # Example output
-├── notebooks/
-│   └── model_walkthrough.ipynb     # End-to-end walkthrough
-├── requirements.txt
+sku_reorder_model/
+├── src/                  # Core model logic (velocity, flags, report generation)
+├── generate_data.py      # Generates synthetic inventory and sales data
 └── README.md
 ```
 
@@ -99,34 +88,23 @@ sku-reorder-model/
 
 ## How to Run
 
-```bash
-git clone https://github.com/your-username/sku-reorder-model.git
-cd sku-reorder-model
+```
+# Clone the repo
+git clone https://github.com/simranksandhu0/sku_reorder_model.git
+cd sku_reorder_model
 
-pip install -r requirements.txt
-# requirements.txt should include: pandas, openpyxl, pyyaml, jupyter
+# Generate synthetic inventory data
+python generate_data.py
 
-# Run the full pipeline
-python src/report.py --input data/sample_inventory.csv --output outputs/reorder_report.xlsx
+# Run the reorder model
+python src/report.py
 ```
 
 ---
 
 ## Configuration
 
-Edit `config/thresholds.yaml` to set category-specific lead times and buffer days:
-
-```yaml
-categories:
-  apparel:
-    lead_time_days: 14
-    buffer_days: 7
-    slow_mover_threshold: 0.3   # Flag if velocity drops 30% vs prior period
-  accessories:
-    lead_time_days: 10
-    buffer_days: 5
-    slow_mover_threshold: 0.25
-```
+Lead time and buffer thresholds are set per category directly in `src/report.py`. Adjust the `lead_time_days`, `buffer_days`, and `slow_mover_threshold` values to match your category buying cycles.
 
 ---
 
